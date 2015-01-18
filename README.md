@@ -28,13 +28,17 @@ This class supports extensive visit operation with the variadic function `apply_
 
  `apply_visitor` uses perfect forwarding to call the right overloaded `operator()` provided in the callable, and deduces the `noexcept` specification using the `noexcept()` operator on the provided `Callable`. Unlike [Boost.Variant](http://www.boost.org/doc/libs/1_57_0/doc/html/variant/design.html#variant.design.never-empty), the return type of the visitor is automatically deduced to the `std::common_type` of the return type of every  `operator()` that can be invoked by `apply_visitor`.
  
- ### Recursive variant
+### Recursive variant
  
  The recommended way to implement recursive variant is as follows:
 
     struct X;
     typedef vector<X> vec_x;
     struct X : variant< vec_x, int > { using variant<vec_x, int>::variant; };
+
+### Documentation
+
+ Doxygen doc is [here](http://sbabbi.github.io/variant/index.html)
 
 ### Notes
 This is a stub implementation, critics and improvements are welcome. I only tested it on clang with `-std=c++1y`. Both `libstdc++` and `libc++` seems to be compatible (if you want to run the tests with the latter you need a version of `googletest` compiled with `libc++`).
