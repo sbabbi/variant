@@ -5,8 +5,7 @@ var indexSectionsWithContent =
   2: "v",
   3: "aiotvw~",
   4: "s",
-  5: "g",
-  6: "v"
+  5: "g"
 };
 
 var indexSectionNames =
@@ -16,8 +15,7 @@ var indexSectionNames =
   2: "files",
   3: "functions",
   4: "typedefs",
-  5: "related",
-  6: "pages"
+  5: "related"
 };
 
 var indexSectionLabels =
@@ -27,7 +25,6 @@ var indexSectionLabels =
   2: "Files",
   3: "Functions",
   4: "Typedefs",
-  5: "Friends",
-  6: "Pages"
+  5: "Friends"
 };
 
