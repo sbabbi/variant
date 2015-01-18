@@ -318,7 +318,7 @@ public:
         invoke(
             [&](auto & val)
             {
-                typedef typename std::remove_reference<decltype(val)>::type T;
+                typedef typename std::decay<decltype(val)>::type T;
 
                 new (& get< variant_index<T, variant>::value >(storage_)) T(val);
             },
@@ -334,7 +334,7 @@ public:
         invoke(
             [&](auto & val)
             {
-                typedef typename std::remove_reference<decltype(val)>::type T;
+                typedef typename std::decay<decltype(val)>::type T;
 
                 new (& get< variant_index<T, variant>::value >(storage_)) T(val);
             },
@@ -352,7 +352,7 @@ public:
         invoke(
             [&](auto & val)
             {
-                typedef typename std::remove_reference<decltype(val)>::type T;
+                typedef typename std::decay<decltype(val)>::type T;
                 
                 new (& get< variant_index<T, variant>::value >(storage_)) T(std::move(val) );
             },
@@ -373,7 +373,7 @@ public:
         invoke(
             [&](auto & val)
             {
-                typedef typename std::remove_reference<decltype(val)>::type T;
+                typedef typename std::decay<decltype(val)>::type T;
 
                 new (& get< deduce_overload_t<T>::value >(storage_)) T(val);
             },
@@ -394,7 +394,7 @@ public:
         invoke(
             [&](auto && val)
             {
-                typedef typename std::remove_reference<decltype(val)>::type T;
+                typedef typename std::decay<decltype(val)>::type T;
 
                 new (& get< deduce_overload_t<T>::value >(storage_)) T(std::move(val));
             },
@@ -446,7 +446,7 @@ public:
         invoke(
             [&](auto & val)
             {
-                typedef typename std::remove_reference<decltype(val)>::type T;
+                typedef typename std::decay<decltype(val)>::type T;
                 val.~T();
             },
             storage_,
@@ -480,7 +480,7 @@ public:
             invoke(
                 [&](auto & val)
                 {
-                    typedef typename std::remove_reference<decltype(val)>::type T;
+                    typedef typename std::decay<decltype(val)>::type T;
 
                     get< variant_index<T, variant>::value >( storage_ ) = val;
                 },
@@ -535,7 +535,7 @@ public:
             invoke(
                 [&](auto & val)
                 {
-                    typedef typename std::remove_reference<decltype(val)>::type T;
+                    typedef typename std::decay<decltype(val)>::type T;
 
                     get< variant_index<T, variant>::value >( storage_ ) = std::move(val);
                 },
@@ -573,7 +573,7 @@ public:
         return invoke(
             [&](auto & val) -> const std::type_info &
             {
-                return typeid(typename std::remove_reference<decltype(val)>::type);
+                return typeid(typename std::decay<decltype(val)>::type);
             },
             storage_,
             which_);
