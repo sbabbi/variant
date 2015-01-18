@@ -39,6 +39,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "relational.hpp"
+
 /**
  * @brief A templated generalized union
  * @warning The user must manually call the destructor of the active member
@@ -269,7 +271,7 @@ template<class ... Args>
 class variant_storage
 {
     using storage_type = typename std::conditional<
-            std::__and_< std::is_literal_type<Args> ... >::value,
+            detail::and_< std::is_literal_type<Args> ... >::value,
             literal_variant_storage<Args...>,
             nonliteral_variant_storage<Args...>
         >::type;
@@ -351,7 +353,7 @@ class invoke_variant_storage_t
     
     template<class Callable, class VariantStorage, std::size_t ... Is>
     struct is_nothrow_callable< Callable, VariantStorage, std::integer_sequence<std::size_t, Is...> > : 
-        std::__and_<
+        detail::and_<
             std::integral_constant<
                 bool,
                 noexcept( std::declval<Callable&&>()( get<Is>(std::declval<VariantStorage>()) ) ) > ...

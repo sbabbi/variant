@@ -228,12 +228,39 @@ class variant
      * \endcode
      * 
      * Where @c T0, @c T1, @c T2 .. @c Tn are the \ref Types of this variant.
-     * Calling \ref deduce_overload \<U0, U1, ... Un\> will return the index
-     * of the type that best matches a construction with the argument \ref CallArgs,
+     * Calling \ref deduce_overload \<T\> will return the index
+     * of the type that best matches a construction with the argument \ref T,
      * or fail in case of ambiguity
      */
-    template<class ... Args>
-    using deduce_overload = decltype( std::declval<deduce_overload_helper< Types ... > >() ( { std::declval<Args>() ... } ) );
+    template<class T, class X = void>
+    struct deduce_overload
+    {
+        static_assert( std::conditional_t<true, std::false_type, X>::value, "Type deduction for T is ambiguous" );
+    };
+    
+    template<class T>
+    struct deduce_overload< 
+        T,
+        typename std::enable_if< 
+            detail::or_< std::is_same< std::decay_t<T>,  Types > ... >::value
+        >::type >
+    {
+        typedef typename variant_index< std::decay_t<T>, variant >::type type;
+    };
+    
+    template<class T>
+    struct deduce_overload< 
+        T,
+        typename std::enable_if< 
+            !detail::or_< std::is_same< std::decay_t<T>,  Types > ... >::value,
+            decltype(std::result_of_t< deduce_overload_helper<Types...>(T) >{}, void() )
+        >::type >
+    {
+        typedef std::result_of_t< deduce_overload_helper<Types...>(T) > type;
+    };
+    
+    template<class T>
+    using deduce_overload_t = typename deduce_overload<T>::type;
 
     // Enable testing of deduce_overload
     friend class variant_deduce_overload_Test;
@@ -241,9 +268,9 @@ class variant
     // Checks if N types are all different
     template<class T, class ... Args>
     struct all_different :
-            std::__and_<
+            detail::and_<
                     all_different< Args ... >,
-                    std::__not_< std::is_same<T,Args> >...
+                    detail::not_< std::is_same<T,Args> >...
             > {};
 
     template<class T>
@@ -252,16 +279,16 @@ class variant
     template<class ... OtherTypes>
     static constexpr std::size_t get_which_for( const variant<OtherTypes...> & v) noexcept
     {
-        constexpr std::size_t which_map[] = { variant_index<OtherTypes, variant>::value ... };
+        constexpr std::size_t which_map[] = { deduce_overload_t<OtherTypes>::value ... };
         return which_map[ v.which() ];
     }
 
 public:
     
     static_assert( all_different< Types ...>::value, "Variant type parameters must be all different" );
-    static_assert( !std::__or_< std::is_reference<Types>... >::value, "Variant type parameters can not be references" );
-    static_assert( !std::__or_< std::is_const<Types>... >::value, "Variant type parameters can not be const" );
-    static_assert( !std::__or_< std::is_volatile<Types>... >::value, "Variant type parameters can not be volatile" );
+    static_assert( !detail::or_< std::is_reference<Types>... >::value, "Variant type parameters can not be references" );
+    static_assert( !detail::or_< std::is_const<Types>... >::value, "Variant type parameters can not be const" );
+    static_assert( !detail::or_< std::is_volatile<Types>... >::value, "Variant type parameters can not be volatile" );
     static_assert( sizeof ... (Types) > 0, "Type list can not be empty" );
     
     //! The underlying \ref variant_storage type.
@@ -284,7 +311,7 @@ public:
      * Copy construct the value currently bound on \p other on this variant.
      */
     variant( const variant& other ) 
-        noexcept( std::__and_< std::is_nothrow_copy_constructible<Types> ... >::value ) :
+        noexcept( detail::and_< std::is_nothrow_copy_constructible<Types> ... >::value ) :
 
         which_( other.which_ )
     {
@@ -300,7 +327,7 @@ public:
     }
     
     variant( variant & other )
-        noexcept( std::__and_<std::is_nothrow_copy_constructible<Types> ... >::value ) :
+        noexcept( detail::and_<std::is_nothrow_copy_constructible<Types> ... >::value ) :
 
         which_( other.which_ )
     {
@@ -319,7 +346,7 @@ public:
      * @brief Move constructor, invokes the move constructor of the type currently bound on \p other.
      * @pre All \p Types must be @c MoveConstructible
      */
-    variant( variant && other ) noexcept( std::__and_< std::is_nothrow_move_constructible<Types> ... >::value) :
+    variant( variant && other ) noexcept( detail::and_< std::is_nothrow_move_constructible<Types> ... >::value) :
         which_( other.which_ )
     {
         invoke(
@@ -339,7 +366,7 @@ public:
      */
     template<class ... OtherTypes>
     variant( const variant<OtherTypes...> & other ) 
-        noexcept( std::__and_<std::is_nothrow_copy_constructible<OtherTypes> ... >::value ) :
+        noexcept( detail::and_<std::is_nothrow_copy_constructible<OtherTypes> ... >::value ) :
 
         which_( get_which_for(other) )
     {
@@ -348,10 +375,10 @@ public:
             {
                 typedef typename std::remove_reference<decltype(val)>::type T;
 
-                new (& get< variant_index<T, variant>::value >(storage_)) T(val);
+                new (& get< deduce_overload_t<T>::value >(storage_)) T(val);
             },
-            other.storage_,
-            other.which_);
+            other.get_storage(),
+            other.which());
     }
     
     /**
@@ -360,61 +387,61 @@ public:
      */
     template<class ... OtherTypes>
     variant( variant<OtherTypes...> && other ) 
-        noexcept( std::__and_<std::is_nothrow_move_constructible<OtherTypes> ... >::value ) :
+        noexcept( detail::and_<std::is_nothrow_move_constructible<OtherTypes> ... >::value ) :
 
         which_( get_which_for(other) )
     {
         invoke(
-            [&](auto & val)
+            [&](auto && val)
             {
                 typedef typename std::remove_reference<decltype(val)>::type T;
 
-                new (& get< variant_index<T, variant>::value >(storage_)) T(std::move(val));
+                new (& get< deduce_overload_t<T>::value >(storage_)) T(std::move(val));
             },
-            other.storage_,
-            other.which_);
-    }
-    
-    /**
-     * @fn variant( T&& other)
-     * @brief Perfect forwarding constructor.
-     * @pre \p T must be in the \p Types list.
-     */
-    template<class T,
-            class = typename std::enable_if< 
-                std::__or_< std::is_same< typename std::decay<T>::type, Types > ... >::value
-            >::type,
-            class Index = typename variant_index< typename std::decay<T>::type, variant>::type >
-    variant( T && other ) noexcept( std::is_nothrow_constructible< typename std::remove_reference<T>::type, T&&>::value ) :
-        which_( Index::value ),
-        storage_( Index{},
-                  std::forward<T>(other) )
-    {
+            other.get_storage(),
+            other.which());
     }
     
     /**
      * @brief Generic constructor, tries to deduce the desired type.
      * 
      * Use the same rules as overload resolution to determine which type in \p Types
-     * shall be initialized, then perfect forward the arguments to the constructor of that type.
+     * shall be initialized, then perfect forward the argument to the constructor of that type.
      */
-    template<class ... Args>
-    variant( Args && ... args ) 
+    template<class T>
+    variant( T && value ) 
         noexcept( std::is_nothrow_constructible<
             storage_t,
-            typename deduce_overload<Args && ... >::type,
-            Args && ... >::value) : 
+            deduce_overload_t<T&&>,
+            T&&>::value) : 
 
-        which_( deduce_overload<Args && ... >::value ),
-        storage_( typename deduce_overload<Args && ... >::type{}, 
-                  std::forward<Args>(args) ... )
+        which_( deduce_overload_t<T&&>::value ),
+        storage_( deduce_overload_t<T&&>{}, 
+                  std::forward<T>(value) )
+    {}
+    
+    /**
+     * @brief Initializer list constructor, tries to deduce the desired type
+     * 
+     * Use the same rules as overload resolution to determine which type in \p Types
+     * shall be initialized, then perfect forward the arguments to the constructor of that type.
+     */
+    template<class T>
+    variant( std::initializer_list<T> init_list ) 
+        noexcept( std::is_nothrow_constructible<
+            storage_t,
+            deduce_overload_t< std::initializer_list<T> >,
+            std::initializer_list<T> >::value) : 
+
+        which_( deduce_overload_t< std::initializer_list<T> >::value ),
+        storage_( deduce_overload_t< std::initializer_list<T> >{}, init_list )
     {}
 
     /**
      * @brief Destructor, calls the destructor on the currently bound type.
      * @pre All \p Types must be @c Destructible
      */
-    ~variant() noexcept( std::__and_< std::is_nothrow_destructible< Types > ... >::value)
+    ~variant() noexcept( detail::and_< std::is_nothrow_destructible< Types > ... >::value)
     {
         invoke(
             [&](auto & val)
@@ -441,11 +468,11 @@ public:
      * destroy the current bound object and move the temporary copy into this.
      */
     variant& operator=(const variant & other) 
-        noexcept( std::__and_ <
+        noexcept( detail::and_ <
             std::is_nothrow_copy_assignable< Types > ...,
             std::is_nothrow_copy_constructible< Types > ... >::value)
     {
-        static_assert( std::__and_< std::is_nothrow_destructible<Types> ... >::value, 
+        static_assert( detail::and_< std::is_nothrow_destructible<Types> ... >::value, 
                       "Can not implement any exception safety on variant copy assignement if a destructor can throw" );
 
         if ( which_ == other.which_ )
@@ -475,7 +502,7 @@ public:
             else
             {
                 // If the move constructor throws, we can not restore the original value
-                static_assert( std::__and_< std::is_nothrow_move_constructible<Types> ... >::value, 
+                static_assert( detail::and_< std::is_nothrow_move_constructible<Types> ... >::value, 
                         "Can not implement any exception safety on variant copy assignement if a move constructor can throw" );
                 
                 // Copy and move
@@ -501,7 +528,7 @@ public:
      * 
      * Otherwise, destroy the current bound object and reinitialize the variant moving the object currently bound on \p other.
      */
-    variant& operator=(variant && other) noexcept( std::__and_ <std::is_nothrow_move_assignable<Types > ... >::value)
+    variant& operator=(variant && other) noexcept( detail::and_ <std::is_nothrow_move_assignable<Types > ... >::value)
     {
         if ( which_ == other.which_ )
         {
@@ -518,10 +545,10 @@ public:
         else
         {
             // If the move constructor throws, we can not restore the original value
-            static_assert( std::__and_< std::is_nothrow_move_constructible<Types > ... >::value, 
+            static_assert( detail::and_< std::is_nothrow_move_constructible<Types > ... >::value, 
                            "Can not implement any exception safety on variant move assignement if a move constructor can throw" );
 
-            static_assert( std::__and_< std::is_nothrow_destructible<Types > ... >::value, 
+            static_assert( detail::and_< std::is_nothrow_destructible<Types > ... >::value, 
                            "Can not implement any exception safety on variant move assignement if a destructor can throw" );            
             
             // Destroy the old one

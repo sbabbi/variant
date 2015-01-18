@@ -93,7 +93,7 @@ TEST(visitor, multivisitor)
     
     auto f = [](auto l, auto r) -> std::string 
     { 
-        return static_cast<std::ostringstream&>( std::ostringstream() << l << ' ' << r ).str();
+        return static_cast<std::ostringstream&&>( std::ostringstream() << l << ' ' << r ).str();
     };
     
     EXPECT_EQ( "Hello 22", apply_visitor( f, a, b) );

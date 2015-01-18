@@ -48,7 +48,7 @@ class curried_t
 {
 public:
     curried_t( Callable && f, T && value ) 
-        noexcept( std::__and_<
+        noexcept( detail::and_<
             std::is_nothrow_constructible<Callable, Callable &&>,
             std::is_nothrow_constructible<T, T&&> >::value ) :
         f( std::forward<Callable>(f) ),
@@ -155,7 +155,7 @@ struct is_nothrow_visitable<Callable, Head, Tail ... > :
     
 template<class Callable, class ... Args, class ... Tail>
 struct is_nothrow_visitable<Callable, variant<Args... > &, Tail ... > :
-    std::__and_<
+    detail::and_<
         is_nothrow_visitable<
             Callable,
             Args&,
@@ -163,7 +163,7 @@ struct is_nothrow_visitable<Callable, variant<Args... > &, Tail ... > :
 
 template<class Callable, class ... Args, class ... Tail>
 struct is_nothrow_visitable<Callable, variant<Args... > &&, Tail ...> :
-    std::__and_<
+    detail::and_<
         is_nothrow_visitable<
             Callable,
             Args&&,
@@ -171,7 +171,7 @@ struct is_nothrow_visitable<Callable, variant<Args... > &&, Tail ...> :
 
 template<class Callable, class ... Args, class ... Tail>
 struct is_nothrow_visitable<Callable, variant<Args... > const &, Tail ...> :
-    std::__and_<
+    detail::and_<
         is_nothrow_visitable<
             Callable,
             Args const &,
