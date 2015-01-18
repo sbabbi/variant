@@ -43,3 +43,5 @@ This class supports extensive visit operation with the variadic function `apply_
 ### Notes
 This is a stub implementation, critics and improvements are welcome. I only tested it on clang with `-std=c++1y`. Both `libstdc++` and `libc++` seems to be compatible (if you want to run the tests with the latter you need a version of `googletest` compiled with `libc++`).
 
+If you are going to use it in your project I suggest to edit the files to put the implementation inside a namespace of your choice.
+
